@@ -1,4 +1,3 @@
-import datetime
 import re
 
 import openpyxl
@@ -9,12 +8,6 @@ from openpyxl.styles import Alignment
 
 from validators import HeaderDataModel
 from cutypes import FindCellTS, HeaderColumns, SensorData
-
-
-# данная переменная будет из find_folder
-# excel_file = 'C:\\Users\\Timoha\\Desktop\\SeverWork\\ExcelProjS\\for_tests.xlsx'
-
-COUNT_TEMPERATURE_COLUMN = 20
 
 
 def find_cell_ts(excel_file: str, ts_number: str) -> FindCellTS:
@@ -47,12 +40,14 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
     """
     Находим headedr файла wb страницы wsheet
     """
+    global count_temperature_column
 
+    count_temperature_column = 0
     target_header_data = {
         'Дата\nпроведения\nизмерений': 'date',
-        'Цикл': 'cycle', 
-        # 'Фактическая\nглубина\nскважины, м':
-        # 'actual_depth',
+        'Цикл': 'cycle',
+        'Фактическая\nглубина\nскважины, м':
+        'actual_depth',
         'Глубина измерения, м': 'temperatures',
         'Высота надземной части скважины, м': 'height',
         'Глубина скв-ны с учётом надземной части, м': 'depth',
@@ -68,7 +63,15 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
     if target_row:
         for col in target_row:
             if col.value in target_header_data.keys():
+                if col.value == 'Глубина измерения, м':
+                    count_temperature_column += 1
+                    find_count = True
+                    header_col_dict[target_header_data[col.value]] = col
+                    continue
                 header_col_dict[target_header_data[col.value]] = col
+                find_count = False
+            elif col.value is None and count_temperature_column and find_count is True:
+                count_temperature_column += 1
         try:
             HeaderDataModel(**header_col_dict)
         except Exception as ex:
@@ -106,7 +109,7 @@ def add_new_row(wsheet: Worksheet, cell_ts: Cell) -> int | None:
     max_row = wsheet.max_row
     value = None
 
-    while value is None and value != 'EndTable':
+    while value is None and str(value).lower() != 'EndTable'.lower():
         ts_row += 1
         value = wsheet[f'A{ts_row}'].value
         if ts_row > max_row:
@@ -184,18 +187,21 @@ def put_data_to_excel(
     Вставляем данные в ексель файл
     """
 
+    cargo_height = data['cargo_height']
+
     # имена колонок
     date_column = header_in_cells['date'].column_letter
     cycle_column = header_in_cells['cycle'].column_letter
     height_column = header_in_cells['height'].column_letter
     depth_column = header_in_cells['depth'].column_letter
     temperatures_column = header_in_cells['temperatures'].column
-    
+    actual_depth_column = header_in_cells['actual_depth'].column_letter
+
     date = data['date']
-    height = data['height']
-    depth = data['depth']
+    height = data['height'] + cargo_height
+    depth = data['depth'] + cargo_height
     temperatures = data['temperatures']
-    
+
     # вставляем дату
     old_cell_date = wsheet[f'{date_column}{input_row-1}']
     cell_date = wsheet[f'{date_column}{input_row}']
@@ -232,68 +238,29 @@ def put_data_to_excel(
     # В случае когда температур больше необходимого, берем их с конца
 
     temp_column_counter = 0
-    count_temps = int((height + depth) / 2)
+
+    count_temps = depth - height
+    if int(count_temps % 1 * 10) >= 9:
+        count_temps = int(count_temps) + 1
+    else:
+        count_temps = int(count_temps)
     if len(temperatures) > count_temps:
         temperatures.reverse()
         temperatures = temperatures[:count_temps]
         temperatures.reverse()
-    if len(temperatures) < 20:
-        none_list = [None] * (20 - len(temperatures))
+    if len(temperatures) < count_temperature_column:
+        none_list = [None] * (count_temperature_column - len(temperatures))
         temperatures.extend(none_list)
 
     # вставляем значения
-    while temp_column_counter < COUNT_TEMPERATURE_COLUMN:
+    while temp_column_counter < count_temperature_column:
         if temperatures[temp_column_counter] is None:
             wsheet.cell(input_row, temperatures_column + temp_column_counter).value = '-'
         else:
             wsheet.cell(input_row, temperatures_column + temp_column_counter).value = temperatures[temp_column_counter]
         temp_column_counter += 1
 
-
-# def main():
-#     # нашли ячейку с тс и страницу в файле, которая с ним связана
-#     cell_ts_data = find_cell_ts(excel_file, 'Тс 12-4')
-#     if cell_ts_data.get('error'):
-#         return cell_ts_data['error']
-#     else:
-#         cell_ts = cell_ts_data['cell_ts']
-#         wb = cell_ts_data['wb']
-#         wsheet = cell_ts_data['wsheet']
-
-#     # нашли хедер
-#     header_cells = find_header_in_sheet(wsheet)
-
-#     if header_cells.get('error'):
-#         return header_cells['error']
-#     else:
-#         # header_validate = validators.header_data_validator(header_cells)
-#         # if header_validate.get('error'):
-#         #     return header_validate.get('error')
-#         # else:
-#         date = header_cells['date']
-
-#     merged_cells_list, header_row = unmerge_all_cells_after_header(wsheet, date)
-
-#     input_row = add_new_row(wsheet, cell_ts) # добавили новую строку и вернули ее
-#     if input_row is None:
-#         return {'error': 'Не удалось добавить строку'}
-
-#     make_style_for_new_row(wsheet, input_row)
-
-#     make_merged_cells(wsheet, merged_cells_list, cell_ts, header_row)
-
-#     sensor_data = get_sensor_data('n0')
-#     if sensor_data.get('error'):
-#         return sensor_data.get('error')
-#     # sensor_validate = validators.sensor_data_validator(sensor_data)
-#     # if sensor_validate.get('error'):
-#     #     return sensor_validate.get('error')
-
-#     put_data_to_excel(wsheet, input_row, header_cells, sensor_data)
-
-#     try:
-#         wb.save('test.xlsx')
-#     except PermissionError:
-#         return {'error': 'Закройте файл, в который идет сохранение и попробуй снова.'}
-
-# print(main())
+    # вставляем фактическую глубину
+    cell_sum_depth = str(cell_depth.coordinate)
+    cell_sum_height = str(cell_height.coordinate)
+    wsheet[f'{actual_depth_column}{input_row}'] = f'=({cell_sum_depth}-{cell_sum_height})'

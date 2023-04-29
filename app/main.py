@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 
 from find_folder import find_file
 from sensor_data import get_sensor_data
@@ -33,7 +32,7 @@ def main():
     count_steps = 1
     sensor_number = input('Введите номер сенсора. Пример("n232"): ')
     logging.info(f'Начали работу. Датчик {sensor_number}')
-    print(f'[count_steps/{steps}] Начинаем работу')
+    print(f'[{count_steps}/{steps}] Начинаем работу')
     count_steps += 1
 
     # сбор иноформации с датчиков
@@ -51,7 +50,7 @@ def main():
         logging.critical(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data()')
         print(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data()')
         return
-    
+
     # поиск файла с нужным ГК
     try:
         file_path = find_file(sensor_gk_name)
@@ -65,7 +64,7 @@ def main():
         logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file()')
         print(f'Неизвестная ошибка: {ex}. Функция: find_file()')
         return
-    
+
     # создаем бекап файла
     try:
         backup = Backup(file_path)
@@ -110,8 +109,8 @@ def main():
         logging.critical(f'Неизвестная ошибка: {ex}. Функция find_header_in_sheet()')
         print(f'Неизвестная ошибка: {ex}. Функция find_header_in_sheet()')
         backup.delete()
-        return 
-    
+        return
+
     # разъединяем все ячейки после хедера
     try:
         merged_cells, last_header_row = unmerge_all_cells_after_header(wsheet, header_date)
@@ -122,7 +121,7 @@ def main():
         print(f'Неизвестная ошибка: {ex}. Функция unmerge_all_cells_after_header()')
         backup.delete()
         return
-    
+
     # вставляем новую строку
     try:
         new_row = add_new_row(wsheet, cell_ts)
@@ -138,7 +137,7 @@ def main():
         print(f'Неизвестная ошибка: {ex}. Функция add_new_row()')
         backup.delete()
         return
-    
+
     # добавляем стили к новой строке (стили берутся на основе предыдущей строки)
     try:
         make_style_for_new_row(wsheet, new_row)
@@ -149,7 +148,7 @@ def main():
         print(f'Неизвестная ошибка: {ex}. Функция make_style_for_new_row()')
         backup.delete()
         return
-    
+
     # соединяем все ячейки обратно
     try:
         make_merged_cells(wsheet, merged_cells, cell_ts, last_header_row)
@@ -160,7 +159,7 @@ def main():
         print(f'Неизвестная ошибка: {ex}. Функция make_merged_cells()')
         backup.delete()
         return
-    
+
     # вставляем данные
     try:
         put_data = put_data_to_excel(wsheet, new_row, header_columns, sensor_data)
@@ -195,7 +194,7 @@ def main():
                  f'Файл сохранен. Путь к файлу: {file_path}')
     print(f'[{count_steps}/{steps}] Работа завершена. Данные добавлены. '
           f'Файл сохранен. Путь к файлу: {file_path}')
-    
+
     count_steps += 1
 
 

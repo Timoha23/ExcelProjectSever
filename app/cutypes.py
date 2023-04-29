@@ -12,6 +12,7 @@ class SensorData(TypedDict):
     ts_number: str
     depth: int | float
     height: int | float
+    cargo_height: int | float
 
 
 class FindCellTS(TypedDict):
@@ -25,4 +26,5 @@ class HeaderColumns(TypedDict):
     cycle: Cell
     temperatures: Cell
     depth: Cell
+    actual_depth: Cell
     height: Cell

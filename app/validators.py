@@ -10,7 +10,8 @@ class SensorDataModel(BaseModel):
     ts_number: str = Field(...)
     depth: Union[int, float] = Field(...)
     height: Union[int, float] = Field(...)
-    temperatures: list[Union[int, float]] = Field(..., min_items=1) 
+    temperatures: list[Union[int, float]] = Field(..., min_items=1)
+    cargo_height: Union[int, float] = Field(...)  # высота груза
 
 
 class HeaderDataModel(BaseModel):
@@ -18,4 +19,5 @@ class HeaderDataModel(BaseModel):
     cycle: object = Field(...)
     height: object = Field(...)
     depth: object = Field(...)
+    actual_depth: object = Field(...)
     temperatures: object = Field(...)
