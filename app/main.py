@@ -1,12 +1,13 @@
 import logging
 import os
+import traceback
 
 from find_folder import find_file
 from sensor_data import get_sensor_data
 from add_row import (find_cell_ts, find_header_in_sheet,
                      unmerge_all_cells_after_header, add_new_row,
                      make_style_for_new_row, make_merged_cells,
-                     put_data_to_excel)
+                     put_data_to_excel, get_header_lengths_and_input_row)
 from backup import Backup
 from settings import APP_PATH
 # создаем директорию с логом
@@ -47,8 +48,8 @@ def main():
         print(f'[{count_steps}/{steps}] Получили данные с датчиков')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data()')
-        print(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data(). Traceback: {traceback.format_exc()}')
+        print(f'Неизвестная ошибка: {ex}. Функция: get_sensor_data().')
         return
 
     # поиск файла с нужным ГК
@@ -61,7 +62,7 @@ def main():
         print(f'[{count_steps}/{steps}] Нашли файл: {file_path}')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция: find_file()')
         return
 
@@ -71,7 +72,7 @@ def main():
         backup_path = backup.create(sensor_gk_name)
         print(f'[{count_steps}/{steps}] Создали backup. Путь: {backup_path}')
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция: find_file()')
         return
 
@@ -89,7 +90,7 @@ def main():
         print(f'[{count_steps}/{steps}] Нашли ячейку с ТС')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_cell_ts()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_cell_ts(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция: find_cell_ts()')
         backup.delete()
         return
@@ -102,29 +103,39 @@ def main():
             print('Ошибка:', header_columns['error'])
             backup.delete()
             return
-        header_date = header_columns['date']
         print(f'[{count_steps}/{steps}] Нашли хедер')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция find_header_in_sheet()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция find_header_in_sheet(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция find_header_in_sheet()')
+        backup.delete()
+        return
+
+    # 
+    try:
+        input_row, after_row, temperatures_length, is_first_input = (
+            get_header_lengths_and_input_row(wsheet, cell_ts, header_columns)
+        )
+    except Exception as ex:
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция get_header_lengths_and_input_row(). Traceback: {traceback.format_exc()}')
+        print(f'Неизвестная ошибка: {ex}. Функция get_header_lengths_and_input_row()')
         backup.delete()
         return
 
     # разъединяем все ячейки после хедера
     try:
-        merged_cells, last_header_row = unmerge_all_cells_after_header(wsheet, header_date)
+        merged_cells, last_header_row = unmerge_all_cells_after_header(wsheet, after_row)
         print(f'[{count_steps}/{steps}] Разъединили ячейки')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция unmerge_all_cells_after_header()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция unmerge_all_cells_after_header(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция unmerge_all_cells_after_header()')
         backup.delete()
         return
 
     # вставляем новую строку
     try:
-        new_row = add_new_row(wsheet, cell_ts)
+        new_row = add_new_row(wsheet, cell_ts, input_row)
         if new_row is None:
             logging.error('Ошибка: Не удалось добавить новую строку')
             print('Ошибка: Не удалось добавить новую строку')
@@ -133,7 +144,7 @@ def main():
         print(f'[{count_steps}/{steps}] Вставили новую строку')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция add_new_row()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция add_new_row(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция add_new_row()')
         backup.delete()
         return
@@ -144,25 +155,27 @@ def main():
         print(f'[{count_steps}/{steps}] Применили стили к новой строке')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция make_style_for_new_row()')        
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция make_style_for_new_row(). Traceback: {traceback.format_exc()}')        
         print(f'Неизвестная ошибка: {ex}. Функция make_style_for_new_row()')
         backup.delete()
         return
 
     # соединяем все ячейки обратно
     try:
-        make_merged_cells(wsheet, merged_cells, cell_ts, last_header_row)
+        make_merged_cells(wsheet, merged_cells, cell_ts, last_header_row,
+                          is_first_input)
         print(f'[{count_steps}/{steps}] Соединили ячейки обратно')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция make_merged_cells()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция make_merged_cells(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция make_merged_cells()')
         backup.delete()
         return
 
     # вставляем данные
     try:
-        put_data = put_data_to_excel(wsheet, new_row, header_columns, sensor_data)
+        put_data = put_data_to_excel(wsheet, input_row, header_columns,
+                                     sensor_data, temperatures_length, cell_ts)
         if put_data is not None:
             logging.error(f'Ошибка: {put_data["error"]}')
             print('Ошибка:', put_data['error'])
@@ -171,7 +184,8 @@ def main():
         print(f'[{count_steps}/{steps}] Вставили данные в строку')
         count_steps += 1
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция put_data_to_excel()')
+        print(traceback.format_exc())
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция put_data_to_excel(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция put_data_to_excel()')
         backup.delete()
         return
@@ -185,7 +199,7 @@ def main():
         backup.delete()
         return
     except Exception as ex:
-        logging.critical(f'Неизвестная ошибка: {ex}. Функция wb.save()')
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция wb.save(). Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. wb.save()')
         backup.delete()
         return

@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 
 import openpyxl
@@ -31,11 +32,6 @@ class Backup:
     def delete(self):
         if self.path_backup_file is not None:
             if self.first_date_path is True:
-                os.remove(self.path_folder_date)
+                shutil.rmtree(self.path_folder_date)
             else:
                 os.remove(self.path_backup_file)
-
-
-
-# if not os.path.exists(f'backups/{name_folder_date}'):
-#     os.makedirs(name_folder_date)

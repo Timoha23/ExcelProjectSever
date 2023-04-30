@@ -5,6 +5,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.merge import MergedCellRange
 from openpyxl.cell import Cell
 from openpyxl.styles import Alignment
+from openpyxl.styles.cell_style import StyleArray
 
 from validators import HeaderDataModel
 from cutypes import FindCellTS, HeaderColumns, SensorData
@@ -30,7 +31,16 @@ def find_cell_ts(excel_file: str, ts_number: str) -> FindCellTS:
                 if cell.value.lower() == ts_number.lower():
                     result = {'cell_ts': cell, 'wsheet': wsheet, 'wb': wb}
                     cell_found = True
-                    break
+                    for merged_cell in wsheet.merged_cells:
+                        if merged_cell.start_cell == cell:
+                            if len(list(merged_cell.rows)) > 2:
+                                break
+                            else:
+                                return {
+                                    'error': ('Для корректной работы программы'
+                                              ' необходимо самостоятельно '
+                                              'заполнить два цикла')
+                                }
         if cell_found:
             break
     return result
@@ -40,9 +50,9 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
     """
     Находим headedr файла wb страницы wsheet
     """
-    global count_temperature_column
+    global temperatures_length
 
-    count_temperature_column = 0
+    temperatures_length = 0
     target_header_data = {
         'Дата\nпроведения\nизмерений': 'date',
         'Цикл': 'cycle',
@@ -63,15 +73,7 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
     if target_row:
         for col in target_row:
             if col.value in target_header_data.keys():
-                if col.value == 'Глубина измерения, м':
-                    count_temperature_column += 1
-                    find_count = True
-                    header_col_dict[target_header_data[col.value]] = col
-                    continue
                 header_col_dict[target_header_data[col.value]] = col
-                find_count = False
-            elif col.value is None and count_temperature_column and find_count is True:
-                count_temperature_column += 1
         try:
             HeaderDataModel(**header_col_dict)
         except Exception as ex:
@@ -83,16 +85,46 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
         return {'error': 'Header не найден. В excel файле.'}
 
 
+def get_header_lengths_and_input_row(
+        wsheet: Worksheet,
+        cell_ts: Cell,
+        header_col_dict: HeaderColumns) -> tuple[int, bool]:
+    """
+    Находим строку окончание хедера, длину столбца с температурами и
+    строку в которую вставляем данные
+    """
+
+    cycle_column_letter = header_col_dict['cycle'].column_letter
+    cell_row = cell_ts.row
+    if wsheet[f'{cycle_column_letter}{cell_row}'].value is None:
+        input_row = cell_row
+    else:
+        input_row = cell_row + 1
+    merged_cells = list(wsheet.merged_cells)
+    for merged_cell in merged_cells:
+        if cell_ts == merged_cell.start_cell:
+            input_row = merged_cell.bottom[0][0] + 1
+        elif header_col_dict['date'] == merged_cell.start_cell:
+            after_row = merged_cell.max_row
+        elif header_col_dict['temperatures'] == merged_cell.start_cell:
+            temperatures_length = merged_cell.max_col - merged_cell.min_col + 1
+    if input_row == cell_row:
+        is_first_input = True
+    else:
+        is_first_input = False
+    return (input_row, after_row, temperatures_length, is_first_input)
+
+
 def unmerge_all_cells_after_header(
         wsheet: Worksheet,
-        header_date: str) -> tuple[list[MergedCellRange], int]:
+        after_row: int) -> tuple[list[MergedCellRange], int]:
     """
     Разъединяем все ячейки снизу хедера
     """
 
     # переменная отвечающая за то, с какой строки разъединять,
     # 2 - дефолтная длина хедера за исключением первой строки
-    after_row = header_date.row + 2 
+
     merged_cells = list(wsheet.merged_cells)
     for merge in merged_cells:
         if merge.start_cell.row > after_row:
@@ -100,23 +132,16 @@ def unmerge_all_cells_after_header(
     return (merged_cells, after_row)
 
 
-def add_new_row(wsheet: Worksheet, cell_ts: Cell) -> int | None:
+def add_new_row(wsheet: Worksheet, cell_ts: Cell, input_row: int) -> int:
     """
     Добавляем новую строку в excel файл
     """
 
-    ts_row = cell_ts.row
-    max_row = wsheet.max_row
-    value = None
-
-    while value is None and str(value).lower() != 'EndTable'.lower():
-        ts_row += 1
-        value = wsheet[f'A{ts_row}'].value
-        if ts_row > max_row:
-            return None
-
-    wsheet.insert_rows(ts_row)
-    return ts_row
+    if cell_ts.row == input_row:
+        pass
+    else:
+        wsheet.insert_rows(input_row)
+    return input_row
 
 
 def make_style_for_new_row(wsheet: Worksheet, input_row: int) -> None:
@@ -137,11 +162,16 @@ def make_merged_cells(
         wsheet: Worksheet,
         merged_cells: list[MergedCellRange],
         cell_ts: Cell,
-        header_row: int) -> None:
+        header_row: int,
+        is_first_input: bool) -> None:
     """
     Соединяем ячейки обартно
     """
 
+    # узнаем количество ячеек по мерджу
+    const = 1
+    if is_first_input:
+        const = 0
     # объединяем ячейки
     for merged_cell in merged_cells:
         if merged_cell.start_cell.row == cell_ts.row:
@@ -157,9 +187,9 @@ def make_merged_cells(
             )
         elif merged_cell.start_cell.row > cell_ts.row:
             start_merge_column = merged_cell.top[0][1]
-            start_merge_row = merged_cell.top[0][0] + 1
+            start_merge_row = merged_cell.top[0][0] + const
             end_merge_column = merged_cell.bottom[0][1]
-            end_merge_row = merged_cell.bottom[0][0] + 1
+            end_merge_row = merged_cell.bottom[0][0] + const
             wsheet.merge_cells(
                 start_row=start_merge_row,
                 start_column=start_merge_column,
@@ -182,7 +212,9 @@ def put_data_to_excel(
         wsheet: Worksheet,
         input_row: int,
         header_in_cells: HeaderColumns,
-        data: SensorData) -> dict | None:
+        data: SensorData,
+        temperatures_length: int,
+        cell_ts: Cell) -> dict | None:
     """
     Вставляем данные в ексель файл
     """
@@ -211,15 +243,18 @@ def put_data_to_excel(
         cell_date._style = old_cell_date._style
 
     # вставляем цикл
-    old_cell_cycle = wsheet[f'{cycle_column}{input_row-1}']
-    old_cell_cycle_num = old_cell_cycle.value
-    if old_cell_cycle_num is None:
-        return {'error': 'Добавьте в конец excel книги EndTable'}
-    cycle_number = int(''.join(re.findall(r'[0-9]', old_cell_cycle_num))) + 1
-    cell_cycle = wsheet[f'{cycle_column}{input_row}']
-    cell_cycle.value = f'«{cycle_number}» цикл'
-    if old_cell_cycle.has_style:
-        cell_cycle._style = old_cell_cycle._style
+    if cell_ts.row == input_row:
+        cell_cycle = wsheet[f'{cycle_column}{input_row}']
+        cell_cycle.value = '«0» цикл'
+        # cell_cycle._style = StyleArray('i', [3, 0, 3, 0, 0, 3, 0, 0, 0])
+    else:
+        old_cell_cycle = wsheet[f'{cycle_column}{input_row-1}']
+        old_cell_cycle_num = old_cell_cycle.value
+        cycle_number = int(''.join(re.findall(r'[0-9]', old_cell_cycle_num))) + 1
+        cell_cycle = wsheet[f'{cycle_column}{input_row}']
+        cell_cycle.value = f'«{cycle_number}» цикл'
+        if old_cell_cycle.has_style:
+            cell_cycle._style = old_cell_cycle._style
 
     # вставляем высоту
     old_cell_height = wsheet[f'{height_column}{input_row-1}']
@@ -248,12 +283,12 @@ def put_data_to_excel(
         temperatures.reverse()
         temperatures = temperatures[:count_temps]
         temperatures.reverse()
-    if len(temperatures) < count_temperature_column:
-        none_list = [None] * (count_temperature_column - len(temperatures))
+    if len(temperatures) < temperatures_length:
+        none_list = [None] * (temperatures_length - len(temperatures))
         temperatures.extend(none_list)
 
     # вставляем значения
-    while temp_column_counter < count_temperature_column:
+    while temp_column_counter < temperatures_length:
         if temperatures[temp_column_counter] is None:
             wsheet.cell(input_row, temperatures_column + temp_column_counter).value = '-'
         else:

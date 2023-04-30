@@ -12,7 +12,10 @@ def get_sensor_data(number: str) -> SensorData:
     Данная функция принимает number (n734)
     """
 
-    wb = openpyxl.load_workbook(SENSOR_DATA_PATH)
+    try:
+        wb = openpyxl.load_workbook(SENSOR_DATA_PATH)
+    except FileNotFoundError:
+        return {'error': f'Неверно указан путь с датчиками: {SENSOR_DATA_PATH}. Проверьте файл settings.txt'}
 
     ws = wb.active
     rows = ws.max_row
