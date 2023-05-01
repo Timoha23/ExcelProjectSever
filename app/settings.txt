@@ -1,0 +1,2 @@
+DATA_FOLDER_PATH := C:\Users\Timoha\Desktop\SeverWork\ExcelProjS\data
+SENSOR_DATA_PATH := C:\Users\Timoha\Desktop\SeverWork\ExcelProjS\data\tests.xlsx

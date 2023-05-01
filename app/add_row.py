@@ -5,7 +5,6 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.merge import MergedCellRange
 from openpyxl.cell import Cell
 from openpyxl.styles import Alignment
-from openpyxl.styles.cell_style import StyleArray
 
 from validators import HeaderDataModel
 from cutypes import FindCellTS, HeaderColumns, SensorData
@@ -31,16 +30,15 @@ def find_cell_ts(excel_file: str, ts_number: str) -> FindCellTS:
                 if cell.value.lower() == ts_number.lower():
                     result = {'cell_ts': cell, 'wsheet': wsheet, 'wb': wb}
                     cell_found = True
+                    merged_cells_starts = []
                     for merged_cell in wsheet.merged_cells:
-                        if merged_cell.start_cell == cell:
-                            if len(list(merged_cell.rows)) > 2:
-                                break
-                            else:
-                                return {
-                                    'error': ('Для корректной работы программы'
-                                              ' необходимо самостоятельно '
-                                              'заполнить два цикла')
-                                }
+                        merged_cells_starts.append(merged_cell.start_cell)
+                    if cell not in merged_cells_starts:
+                        return {
+                            'error': ('Для корректной работы программы'
+                                      ' необходимо самостоятельно '
+                                      'заполнить два цикла')
+                            }
         if cell_found:
             break
     return result

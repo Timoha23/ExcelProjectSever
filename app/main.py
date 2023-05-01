@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import traceback
 
 from find_folder import find_file
@@ -211,6 +212,17 @@ def main():
 
     count_steps += 1
 
+    return True
 
 if __name__ == '__main__':
-    main()
+    flag = True
+    while flag:
+        if main():
+            time.sleep(10)
+            flag = False
+        else:
+            again = input('Пробуем еще? y/n: ')
+            if again.lower() == 'y':
+                continue
+            else:
+                break
