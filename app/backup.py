@@ -4,14 +4,12 @@ from datetime import datetime
 
 import openpyxl
 
-from settings import APP_PATH
-
 
 class Backup:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, backups_path: str):
         self.file_path = file_path
         self.name_folder_date = str(datetime.utcnow().date())
-        self.backups_path = f'{APP_PATH}\\backups'
+        self.backups_path = backups_path
         self.path_backup_file = None
         self.first_date_path = False
 

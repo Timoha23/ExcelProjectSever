@@ -1,24 +1,22 @@
 import os
-
+from pathlib import Path
 
 # ПЕРЕМЕННАЯ УКАЗЫВАЩАЯ НА ПУТЬ ПРОГРАММЫ
 APP_PATH = os.path.dirname(os.path.abspath(__file__))
-# APP_PATH = ''APP_PATH.split('\\')[:-1]
 
-FILES_PATH = {'DATA_FOLDER_PATH': None, 'SENSOR_DATA_PATH': None}
 
-try:
-    with open(f'{APP_PATH}\\settings.txt') as file:
+def get_paths() -> dict[str]:
+    """
+    Получаем пути к файлу с датчиками и с ГК.
+    """
+    paths = {'DATA_FOLDER_PATH': None, 'SENSOR_DATA_PATH': None}
+    settings_txt_path = str(Path(APP_PATH).parent) + '\\settings.txt'
+    with open(settings_txt_path, encoding='utf-8') as file:
         for line in file.readlines():
             if ':=' not in line:
                 continue
             key, value = line.split(':=')
-            if key.strip() in FILES_PATH.keys():
-                FILES_PATH[key.strip()] = value.strip()
-except FileNotFoundError:
-    print('Ошибка: Файл settings.txt не найден. Проверьте что он существует.')
-    input('Нажмите enter для выхода из программы...')
+            if key.strip() in paths.keys():
+                paths[key.strip()] = value.strip()
 
-
-DATA_FOLDER_PATH = FILES_PATH['DATA_FOLDER_PATH']
-SENSOR_DATA_PATH = FILES_PATH['SENSOR_DATA_PATH']
+    return paths

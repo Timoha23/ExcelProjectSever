@@ -1,21 +1,23 @@
 import openpyxl
 from pydantic.error_wrappers import ValidationError
 
-from settings import SENSOR_DATA_PATH
-from validators import SensorDataModel
 from cutypes import SensorData
+from settings import get_paths
+from validators import SensorDataModel
 
 
-def get_sensor_data(number: str) -> SensorData:
+def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
     """
     Получаем данные из файла ПКЦД.xlsx
     Данная функция принимает number (n734)
     """
 
+    path = sensor_data_path
+
     try:
-        wb = openpyxl.load_workbook(SENSOR_DATA_PATH)
+        wb = openpyxl.load_workbook(path)
     except FileNotFoundError:
-        return {'error': f'Неверно указан путь с датчиками: {SENSOR_DATA_PATH}. Проверьте файл settings.txt'}
+        return {'error': f'Неверно указан путь с датчиками: {path}. Проверьте файл settings.txt'}
 
     ws = wb.active
     rows = ws.max_row

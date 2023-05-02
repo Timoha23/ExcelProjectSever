@@ -1,13 +1,13 @@
 import re
 
 import openpyxl
-from openpyxl.worksheet.worksheet import Worksheet
-from openpyxl.worksheet.merge import MergedCellRange
 from openpyxl.cell import Cell
 from openpyxl.styles import Alignment
+from openpyxl.worksheet.merge import MergedCellRange
+from openpyxl.worksheet.worksheet import Worksheet
 
-from validators import HeaderDataModel
 from cutypes import FindCellTS, HeaderColumns, SensorData
+from validators import HeaderDataModel
 
 
 def find_cell_ts(excel_file: str, ts_number: str) -> FindCellTS:

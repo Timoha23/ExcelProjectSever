@@ -2,19 +2,21 @@ import logging
 import os
 import time
 import traceback
+from pathlib import Path
 
+from add_row import (add_new_row, find_cell_ts, find_header_in_sheet,
+                     get_header_lengths_and_input_row, make_merged_cells,
+                     make_style_for_new_row, put_data_to_excel,
+                     unmerge_all_cells_after_header)
+from backup import Backup
 from find_folder import find_file
 from sensor_data import get_sensor_data
-from add_row import (find_cell_ts, find_header_in_sheet,
-                     unmerge_all_cells_after_header, add_new_row,
-                     make_style_for_new_row, make_merged_cells,
-                     put_data_to_excel, get_header_lengths_and_input_row)
-from backup import Backup
-from settings import APP_PATH
+from settings import APP_PATH, get_paths
+
 # создаем директорию с логом
 
-log_path = f'{APP_PATH}\\logs'
-backups_path = f'{APP_PATH}\\backups'
+log_path = str(Path(APP_PATH).parent) + '\\logs'
+backups_path = str(Path(APP_PATH).parent) + '\\backups'
 
 if not os.path.exists(log_path):
     os.makedirs(log_path)
@@ -30,16 +32,33 @@ logging.basicConfig(
 
 
 def main():
-    steps = 11
+    steps = 12
     count_steps = 1
     sensor_number = input('Введите номер сенсора. Пример("n232"): ')
     logging.info(f'Начали работу. Датчик {sensor_number}')
     print(f'[{count_steps}/{steps}] Начинаем работу')
     count_steps += 1
 
+    # проверяем пути
+    try:
+        paths = get_paths()
+        for key, value in paths.items():
+            if value is None:
+                return (f'Ошибка. Проверьте путь для {key} в файле settings.')
+        data_folder_path, sensor_data_path = paths['DATA_FOLDER_PATH'], paths['SENSOR_DATA_PATH']
+        print(f'[{count_steps}/{steps}] Получили пути к файлам')
+        count_steps += 1
+    except FileNotFoundError:
+        print('Ошибка: Файл settings.txt не найден. Проверьте что он существует.')
+        return
+    except Exception as ex:
+        logging.critical(f'Неизвестная ошибка: {ex}. Функция: get_paths(). Traceback: {traceback.format_exc()}')
+        print(f'Неизвестная ошибка: {ex}. Функция: get_paths().')
+        return
+
     # сбор иноформации с датчиков
     try:
-        sensor_data = get_sensor_data(sensor_number)
+        sensor_data = get_sensor_data(sensor_number, sensor_data_path)
         if sensor_data.get('error'):
             logging.error(f'Ошибка: {sensor_data["error"]}')
             print('Ошибка:', sensor_data['error'])
@@ -55,7 +74,7 @@ def main():
 
     # поиск файла с нужным ГК
     try:
-        file_path = find_file(sensor_gk_name)
+        file_path = find_file(sensor_gk_name, data_folder_path)
         if file_path is None:
             logging.error(f'Ошибка: Файл с именем {sensor_gk_name} не найден.')
             print(f'Ошибка: Файл с именем {sensor_gk_name} не найден.')
@@ -69,7 +88,7 @@ def main():
 
     # создаем бекап файла
     try:
-        backup = Backup(file_path)
+        backup = Backup(file_path, backups_path)
         backup_path = backup.create(sensor_gk_name)
         print(f'[{count_steps}/{steps}] Создали backup. Путь: {backup_path}')
     except Exception as ex:
@@ -214,15 +233,11 @@ def main():
 
     return True
 
+
 if __name__ == '__main__':
-    flag = True
-    while flag:
-        if main():
-            time.sleep(10)
-            flag = False
-        else:
-            again = input('Пробуем еще? y/n: ')
-            if again.lower() == 'y':
-                continue
-            else:
-                break
+
+    result = main()
+    if result is True:
+        time.sleep(10)
+    elif result is None:
+        input('Нажмите Enter для выхода...')
