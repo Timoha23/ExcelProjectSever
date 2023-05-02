@@ -76,7 +76,8 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
             HeaderDataModel(**header_col_dict)
         except Exception as ex:
             field_error = str(ex).split('\n')[1]
-            return {'error': f'Ошибка. Поле хедера для {field_error} не найдено.'}
+            return {'error': f'Ошибка. Поле хедера для {field_error} '
+                             f'не найдено.'}
         return header_col_dict
 
     else:
@@ -248,7 +249,8 @@ def put_data_to_excel(
     else:
         old_cell_cycle = wsheet[f'{cycle_column}{input_row-1}']
         old_cell_cycle_num = old_cell_cycle.value
-        cycle_number = int(''.join(re.findall(r'[0-9]', old_cell_cycle_num))) + 1
+        cycle_number = (int(''.join(re.findall(r'[0-9]', old_cell_cycle_num)))
+                        + 1)
         cell_cycle = wsheet[f'{cycle_column}{input_row}']
         cell_cycle.value = f'«{cycle_number}» цикл'
         if old_cell_cycle.has_style:
@@ -288,12 +290,20 @@ def put_data_to_excel(
     # вставляем значения
     while temp_column_counter < temperatures_length:
         if temperatures[temp_column_counter] is None:
-            wsheet.cell(input_row, temperatures_column + temp_column_counter).value = '-'
+            wsheet.cell(
+                input_row,
+                temperatures_column + temp_column_counter
+            ).value = '-'
         else:
-            wsheet.cell(input_row, temperatures_column + temp_column_counter).value = temperatures[temp_column_counter]
+            wsheet.cell(
+                input_row,
+                temperatures_column + temp_column_counter
+            ).value = temperatures[temp_column_counter]
         temp_column_counter += 1
 
     # вставляем фактическую глубину
     cell_sum_depth = str(cell_depth.coordinate)
     cell_sum_height = str(cell_height.coordinate)
-    wsheet[f'{actual_depth_column}{input_row}'] = f'=({cell_sum_depth}-{cell_sum_height})'
+    wsheet[f'{actual_depth_column}{input_row}'] = (
+        f'=({cell_sum_depth}-{cell_sum_height})'
+    )

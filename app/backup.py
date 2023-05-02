@@ -21,7 +21,9 @@ class Backup:
         if not os.path.exists(self.path_folder_date):
             self.first_date_path = True
             os.makedirs(self.path_folder_date)
-        full_file_name = gk_name + '_' + str(datetime.utcnow().time().strftime('%H_%M_%S')) + '.xlsx'
+        full_file_name = gk_name + '_' + (
+            str(datetime.utcnow().time().strftime('%H_%M_%S')) + '.xlsx'
+        )
         wb = openpyxl.load_workbook(self.file_path)
         self.path_backup_file = f'{self.path_folder_date}\\{full_file_name}'
         wb.save(self.path_backup_file)

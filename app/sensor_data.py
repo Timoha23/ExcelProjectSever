@@ -17,7 +17,8 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
     try:
         wb = openpyxl.load_workbook(path)
     except FileNotFoundError:
-        return {'error': f'Неверно указан путь с датчиками: {path}. Проверьте файл settings.txt'}
+        return {'error': f'Неверно указан путь с датчиками: {path}.'
+                         f' Проверьте файл settings.txt'}
 
     ws = wb.active
     rows = ws.max_row
@@ -26,12 +27,12 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
     for i in range(1, rows+1):
         if ws[f'A{i}'].value == number:
             sensors_count = int(ws[i+1][2].value.split(':')[1])
-            data['date'] = ws[i][1].value # дата
-            data['gk_name'] = ws[i+1][4+sensors_count].value # имя газового куста
-            data['ts_number'] = ws[i+1][5+sensors_count].value # номер ТС
-            data['depth'] = ws[i+1][6+sensors_count].value # глубина
-            data['height'] = ws[i+1][7+sensors_count].value # высота
-            data['cargo_height'] = ws[i+1][8+sensors_count].value # высота груза
+            data['date'] = ws[i][1].value  # дата
+            data['gk_name'] = ws[i+1][4+sensors_count].value  # имя газового куста
+            data['ts_number'] = ws[i+1][5+sensors_count].value  # номер ТС
+            data['depth'] = ws[i+1][6+sensors_count].value  # глубина
+            data['height'] = ws[i+1][7+sensors_count].value  # высота
+            data['cargo_height'] = ws[i+1][8+sensors_count].value  # высота груза
 
             for index, el in enumerate(ws[i+1][4:]):
                 if index < sensors_count:
@@ -40,6 +41,7 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
                 SensorDataModel(**data)
             except ValidationError as ex:
                 field_error = str(ex).split('\n')[1]
-                return {'error': f'Ошибка в поле {field_error}. Проверьте данное поле'}
+                return {'error': f'Ошибка в поле {field_error}.'
+                                 f' Проверьте данное поле'}
             return data
     return {'error': f'Номер датчика {number} не найден.'}

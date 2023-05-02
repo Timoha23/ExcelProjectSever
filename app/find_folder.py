@@ -1,7 +1,5 @@
 import os
 
-from settings import get_paths
-
 
 def find_file(gk_name: str, data_folder_path: str) -> str | None:
     """
