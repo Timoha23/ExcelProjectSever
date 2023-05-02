@@ -142,7 +142,7 @@ def main():
         backup.delete()
         return
 
-    # 
+    # s
     try:
         input_row, after_row, temperatures_length, is_first_input = (
             get_header_lengths_and_input_row(wsheet, cell_ts, header_columns)
@@ -198,7 +198,7 @@ def main():
     except Exception as ex:
         logging.critical(f'Неизвестная ошибка: {ex}. Функция'
                          f' make_style_for_new_row().'
-                         f' Traceback: {traceback.format_exc()}')        
+                         f' Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция make_style_for_new_row()')
         backup.delete()
         return

@@ -2,7 +2,6 @@ import openpyxl
 from pydantic.error_wrappers import ValidationError
 
 from cutypes import SensorData
-from settings import get_paths
 from validators import SensorDataModel
 
 
@@ -28,11 +27,12 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
         if ws[f'A{i}'].value == number:
             sensors_count = int(ws[i+1][2].value.split(':')[1])
             data['date'] = ws[i][1].value  # дата
-            data['gk_name'] = ws[i+1][4+sensors_count].value  # имя газового куста
+            data['gk_name'] = ws[i+1][4+sensors_count].value  # имя ГК
             data['ts_number'] = ws[i+1][5+sensors_count].value  # номер ТС
             data['depth'] = ws[i+1][6+sensors_count].value  # глубина
             data['height'] = ws[i+1][7+sensors_count].value  # высота
-            data['cargo_height'] = ws[i+1][8+sensors_count].value  # высота груза
+            # высота груза
+            data['cargo_height'] = ws[i+1][8+sensors_count].value
 
             for index, el in enumerate(ws[i+1][4:]):
                 if index < sensors_count:
