@@ -30,10 +30,10 @@ logging.basicConfig(
 )
 
 
-def main():
+def run(sensor):
     steps = 12
     count_steps = 1
-    sensor_number = input('Введите номер сенсора. Пример("n232"): ')
+    sensor_number = sensor
     logging.info(f'Начали работу. Датчик {sensor_number}')
     print(f'[{count_steps}/{steps}] Начинаем работу')
     count_steps += 1
@@ -98,6 +98,7 @@ def main():
         backup = Backup(file_path, backups_path)
         backup_path = backup.create(sensor_gk_name)
         print(f'[{count_steps}/{steps}] Создали backup. Путь: {backup_path}')
+
     except Exception as ex:
         logging.critical(f'Неизвестная ошибка: {ex}. Функция: find_file().'
                          f' Traceback: {traceback.format_exc()}')
@@ -262,6 +263,32 @@ def main():
     count_steps += 1
 
     return True
+
+
+def main():
+    sensor_numbers = input(
+        'Введите номер сенсора (сенсоров). Пример(n232, n0, n562): '
+    )
+    sensors = sensor_numbers.replace(' ', '').split(',')
+    errors = 0
+    success = 0
+    errors_sensors = []
+    maximum = len(sensors)
+
+    for sensor in sensors:
+        res = run(sensor)
+        if res is True:
+            success += 1
+            print(f'Датчик {sensor} успешно внесен')
+            print(f'Успешно добавлено: {success}/{maximum}. '
+                  f'Ошибочных датчиков: {errors}/{maximum}')
+        else:
+            errors += 1
+            errors_sensors.append(sensor)
+            print(f'Датчик {sensor} не внесен')
+    print(f'Работа завершена. Успешно добавлено: {success}/{maximum}.'
+          f' Ошибочных датчиков: {errors}/{maximum}.'
+          f' Датчики с ошибками: {errors_sensors}')
 
 
 if __name__ == '__main__':
