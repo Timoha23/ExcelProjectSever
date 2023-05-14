@@ -1,4 +1,5 @@
 import openpyxl
+from openpyxl.utils.exceptions import InvalidFileException
 from pydantic.error_wrappers import ValidationError
 
 from cutypes import SensorData
@@ -15,7 +16,7 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
 
     try:
         wb = openpyxl.load_workbook(path)
-    except FileNotFoundError:
+    except (FileNotFoundError, InvalidFileException):
         return {'error': f'Неверно указан путь с датчиками: {path}.'
                          f' Проверьте файл settings.txt'}
 
