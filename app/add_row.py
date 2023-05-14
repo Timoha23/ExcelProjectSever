@@ -59,6 +59,7 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
         'Глубина измерения, м': 'temperatures',
         'Высота надземной части скважины, м': 'height',
         'Глубина скв-ны с учётом надземной части, м': 'depth',
+        't ср., ℃': 'avg_temp',
     }
 
     header_col_dict = {}
@@ -155,6 +156,51 @@ def make_style_for_new_row(wsheet: Worksheet, input_row: int) -> None:
         old_cell = wsheet[f'{cell_colum_letter}{cell_row-1}']
         if old_cell.has_style:
             cell._style = old_cell._style
+
+
+def change_formuls_for_avg_temp(
+        wsheet: Worksheet,
+        input_row: int,
+        header_in_cells: HeaderColumns) -> None:
+    """
+    Изменяем формулы для средней температуры
+    """
+    target_col = header_in_cells['avg_temp'].column_letter
+    first_row = input_row + 1
+    last_row = wsheet.max_row
+    cell_range = wsheet[f"{target_col}{first_row}:{target_col}{last_row}"]
+    found_cells = False
+    for cell in cell_range:
+        if cell[0].value is not None and '=AVERAGE' in str(cell[0].value):
+            avg_cells: str = (cell[0].value.replace('=AVERAGE', '')
+                              .replace('(', '').replace(')', '').split(':'))
+            if found_cells is False:
+                first_col = ''.join(x for x in avg_cells[0] if x.isalpha())
+                last_col = ''.join(x for x in avg_cells[1] if x.isalpha())
+                found_cells = True
+            new_row = cell[0].row
+            new_start_cell = first_col + str(new_row)
+            new_end_cell = last_col + str(new_row)
+            cell[0].value = f'=AVERAGE({new_start_cell}:{new_end_cell})'
+
+
+def change_formuls_for_actual_depth(
+        wsheet: Worksheet,
+        input_row: int,
+        header_in_cells: HeaderColumns) -> None:
+    """
+    Изменяем формулы для фактической глубины скважины
+    """
+    target_col = header_in_cells['actual_depth'].column_letter
+    first_row = input_row + 1
+    last_row = wsheet.max_row
+    cell_range = wsheet[f"{target_col}{first_row}:{target_col}{last_row}"]
+    depth_col = header_in_cells['depth'].column_letter
+    height_col = header_in_cells['height'].column_letter
+    for cell in cell_range:
+        if cell[0].value is not None and '=' in str(cell[0].value):
+            new_row = cell[0].row
+            cell[0].value = f'=({depth_col}{new_row}-{height_col}{new_row})'
 
 
 def make_merged_cells(

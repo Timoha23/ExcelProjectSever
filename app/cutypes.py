@@ -28,3 +28,4 @@ class HeaderColumns(TypedDict):
     depth: Cell
     actual_depth: Cell
     height: Cell
+    avg_temp: Cell

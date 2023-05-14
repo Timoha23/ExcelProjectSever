@@ -6,7 +6,9 @@ from pathlib import Path
 from add_row import (add_new_row, find_cell_ts, find_header_in_sheet,
                      get_header_lengths_and_input_row, make_merged_cells,
                      make_style_for_new_row, put_data_to_excel,
-                     unmerge_all_cells_after_header)
+                     unmerge_all_cells_after_header,
+                     change_formuls_for_avg_temp,
+                     change_formuls_for_actual_depth)
 from backup import Backup
 from find_folder import find_file
 from sensor_data import get_sensor_data
@@ -30,8 +32,8 @@ logging.basicConfig(
 )
 
 
-def run(sensor):
-    steps = 12
+def run(sensor: str):
+    steps = 14
     count_steps = 1
     sensor_number = sensor
     logging.info(f'Начали работу. Датчик {sensor_number}')
@@ -187,6 +189,35 @@ def run(sensor):
         logging.critical(f'Неизвестная ошибка: {ex}. Функция add_new_row().'
                          f' Traceback: {traceback.format_exc()}')
         print(f'Неизвестная ошибка: {ex}. Функция add_new_row()')
+        backup.delete()
+        return
+
+    # сдвигаем формулы для avg_temp
+    try:
+        change_formuls_for_avg_temp(wsheet, input_row, header_columns)
+        print(f'[{count_steps}/{steps}] Сдвинули формулы для ср. темп.')
+        count_steps += 1
+    except Exception as ex:
+        logging.critical(f'Неизвестная ошибка: {ex}. '
+                         f'change_formuls_for_avg_temp().'
+                         f' Traceback: {traceback.format_exc()}')
+        print(f'Неизвестная ошибка: {ex}. '
+              f'Функция change_formuls_for_avg_temp()')
+        backup.delete()
+        return
+
+    # сдвигаем формулы для фактической глубины скважины
+    try:
+        change_formuls_for_actual_depth(wsheet, input_row, header_columns)
+        print(f'[{count_steps}/{steps}] Сдвинули формулы для фактической'
+              f' глубины скважины')
+        count_steps += 1
+    except Exception as ex:
+        logging.critical(f'Неизвестная ошибка: {ex}. '
+                         f'change_formuls_for_actual_depth().'
+                         f' Traceback: {traceback.format_exc()}')
+        print(f'Неизвестная ошибка: {ex}. '
+              f'Функция change_formuls_for_actual_depth()')
         backup.delete()
         return
 
