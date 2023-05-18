@@ -34,6 +34,7 @@ def get_sensor_data(number: str, sensor_data_path: str) -> SensorData:
             data['height'] = ws[i+1][7+sensors_count].value  # высота
             # высота груза
             data['cargo_height'] = ws[i+1][8+sensors_count].value
+            data['ambient_temperature'] = ws[i+1][9+sensors_count].value
 
             for index, el in enumerate(ws[i+1][4:]):
                 if index < sensors_count:

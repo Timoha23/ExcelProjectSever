@@ -60,6 +60,7 @@ def find_header_in_sheet(wsheet: Worksheet) -> HeaderColumns:
         'Высота надземной части скважины, м': 'height',
         'Глубина скв-ны с учётом надземной части, м': 'depth',
         't ср., ℃': 'avg_temp',
+        'Температура\nокружающего\nвоздуха,℃': 'ambient_temperature',
     }
 
     header_col_dict = {}
@@ -273,25 +274,25 @@ def put_data_to_excel(
     depth_column = header_in_cells['depth'].column_letter
     temperatures_column = header_in_cells['temperatures'].column
     actual_depth_column = header_in_cells['actual_depth'].column_letter
+    ambient_temperature_column = (
+        header_in_cells['ambient_temperature'].column_letter
+    )
+    avg_temperature_column = header_in_cells['avg_temp'].column_letter
 
+    ambient_temperature = data['ambient_temperature']
     date = data['date']
     height = data['height'] + cargo_height
     depth = data['depth'] + cargo_height
     temperatures = data['temperatures']
 
     # вставляем дату
-    old_cell_date = wsheet[f'{date_column}{input_row-1}']
     cell_date = wsheet[f'{date_column}{input_row}']
-    # put_date = put_date.strftime("%m/%d/%Y")
     cell_date.value = date
-    if old_cell_date.has_style:
-        cell_date._style = old_cell_date._style
 
     # вставляем цикл
     if cell_ts.row == input_row:
         cell_cycle = wsheet[f'{cycle_column}{input_row}']
         cell_cycle.value = '«0» цикл'
-        # cell_cycle._style = StyleArray('i', [3, 0, 3, 0, 0, 3, 0, 0, 0])
     else:
         old_cell_cycle = wsheet[f'{cycle_column}{input_row-1}']
         old_cell_cycle_num = old_cell_cycle.value
@@ -299,8 +300,6 @@ def put_data_to_excel(
                         + 1)
         cell_cycle = wsheet[f'{cycle_column}{input_row}']
         cell_cycle.value = f'«{cycle_number}» цикл'
-        if old_cell_cycle.has_style:
-            cell_cycle._style = old_cell_cycle._style
 
     # вставляем высоту
     old_cell_height = wsheet[f'{height_column}{input_row-1}']
@@ -309,11 +308,8 @@ def put_data_to_excel(
     if old_cell_height.has_style:
         cell_height._style = old_cell_height._style
     # вставляем глубину
-    old_cell_depth = wsheet[f'{depth_column}{input_row-1}']
     cell_depth = wsheet[f'{depth_column}{input_row}']
     cell_depth.value = depth
-    if old_cell_depth.has_style:
-        cell_depth._style = old_cell_depth._style
 
     # вставляем температуры
     # В случае когда температур больше необходимого, берем их с конца
@@ -353,3 +349,36 @@ def put_data_to_excel(
     wsheet[f'{actual_depth_column}{input_row}'] = (
         f'=({cell_sum_depth}-{cell_sum_height})'
     )
+
+    # вставляем температуру окружающего воздуха
+    cell_ambient_temperature = wsheet[f'{ambient_temperature_column}'
+                                      f'{input_row}']
+    cell_ambient_temperature.value = ambient_temperature
+
+    # вставляем среднюю температуру
+    prev_row = 1
+    prev_avg_temp = wsheet[f'{avg_temperature_column}{input_row-prev_row}']
+    while ('=СРЗНАЧ' not in str(prev_avg_temp.value) and
+           '=AVERAGE' not in str(prev_avg_temp.value)):
+        prev_row += 1
+        if input_row - prev_row < 1:
+            return {'error': 'Формула для среднего значения '
+                             'температуры не найдена'}
+        prev_avg_temp = wsheet[f'{avg_temperature_column}{input_row-prev_row}']
+    avg_temp_column_for_formula = (
+        prev_avg_temp.value.split('(')[1].replace(')', '').split(':')
+    )
+    first_col = (
+        ''.join(x for x in avg_temp_column_for_formula[0] if x.isalpha())
+    )
+    last_col = (
+        ''.join(x for x in avg_temp_column_for_formula[1] if x.isalpha())
+    )
+    cell_avg_temperature = wsheet[f'{avg_temperature_column}{input_row}']
+
+    if type(wsheet[f'{first_col}{input_row}'].value) in (int, float):
+        cell_avg_temperature.value = (
+            f'=AVERAGE({first_col}{input_row}:{last_col}{input_row})'
+        )
+    else:
+        cell_avg_temperature.value = '-'

@@ -3,7 +3,7 @@ import os
 import traceback
 from pathlib import Path
 
-from add_row import (add_new_row, find_cell_ts, find_header_in_sheet,
+from actions import (add_new_row, find_cell_ts, find_header_in_sheet,
                      get_header_lengths_and_input_row, make_merged_cells,
                      make_style_for_new_row, put_data_to_excel,
                      unmerge_all_cells_after_header,

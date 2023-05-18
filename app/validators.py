@@ -12,6 +12,7 @@ class SensorDataModel(BaseModel):
     height: Union[int, float] = Field(...)
     temperatures: list[Union[int, float]] = Field(..., min_items=1)
     cargo_height: Union[int, float] = Field(...)  # высота груза
+    ambient_temperature: Union[int, float] = Field(...)
 
 
 class HeaderDataModel(BaseModel):
