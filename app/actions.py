@@ -27,7 +27,10 @@ def find_cell_ts(excel_file: str, ts_number: str) -> FindCellTS:
         # перебираем строки
         for cell in wsheet['A']:
             if cell.value is not None:
-                if cell.value.lower() == ts_number.lower():
+                if (
+                    cell.value.lower().replace('тс', '').strip() ==
+                    ts_number.lower().replace('тс', '').strip()
+                ):
                     result = {'cell_ts': cell, 'wsheet': wsheet, 'wb': wb}
                     cell_found = True
                     merged_cells_starts = []
@@ -358,27 +361,30 @@ def put_data_to_excel(
     # вставляем среднюю температуру
     prev_row = 1
     prev_avg_temp = wsheet[f'{avg_temperature_column}{input_row-prev_row}']
+    cell_avg_temperature = wsheet[f'{avg_temperature_column}{input_row}']
+    found = True
     while ('=СРЗНАЧ' not in str(prev_avg_temp.value) and
            '=AVERAGE' not in str(prev_avg_temp.value)):
         prev_row += 1
         if input_row - prev_row < 1:
-            return {'error': 'Формула для среднего значения '
-                             'температуры не найдена'}
+            cell_avg_temperature.value = '-'
+            found = False
+            break
         prev_avg_temp = wsheet[f'{avg_temperature_column}{input_row-prev_row}']
-    avg_temp_column_for_formula = (
-        prev_avg_temp.value.split('(')[1].replace(')', '').split(':')
-    )
-    first_col = (
-        ''.join(x for x in avg_temp_column_for_formula[0] if x.isalpha())
-    )
-    last_col = (
-        ''.join(x for x in avg_temp_column_for_formula[1] if x.isalpha())
-    )
-    cell_avg_temperature = wsheet[f'{avg_temperature_column}{input_row}']
-
-    if type(wsheet[f'{first_col}{input_row}'].value) in (int, float):
-        cell_avg_temperature.value = (
-            f'=AVERAGE({first_col}{input_row}:{last_col}{input_row})'
+    if found:
+        avg_temp_column_for_formula = (
+            prev_avg_temp.value.split('(')[1].replace(')', '').split(':')
         )
-    else:
-        cell_avg_temperature.value = '-'
+        first_col = (
+            ''.join(x for x in avg_temp_column_for_formula[0] if x.isalpha())
+        )
+        last_col = (
+            ''.join(x for x in avg_temp_column_for_formula[1] if x.isalpha())
+        )
+
+        if type(wsheet[f'{first_col}{input_row}'].value) in (int, float):
+            cell_avg_temperature.value = (
+                f'=AVERAGE({first_col}{input_row}:{last_col}{input_row})'
+            )
+        else:
+            cell_avg_temperature.value = '-'
